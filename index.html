@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mi Parte Sync</title>
+<style>
+  :root{color-scheme:light dark}
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+       background:#f4f2ec;color:#1a1a18;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;padding:24px}
+  @media (prefers-color-scheme:dark){body{background:#0f0f0c;color:#ecebe3}}
+  .caja{max-width:420px;text-align:center}
+  h1{font-size:22px;font-weight:600;margin:0 0 6px}
+  p{font-size:15px;line-height:1.5;color:#6d6a63;margin:0 0 18px}
+  @media (prefers-color-scheme:dark){p{color:#9a968c}}
+  a.boton{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 22px;
+          border-radius:12px;background:#d08a2a;color:#23231f;font-weight:600;text-decoration:none}
+  .aro{width:34px;height:34px;margin:0 auto 18px;border-radius:50%;
+       border:3px solid rgba(208,138,42,.25);border-top-color:#d08a2a;animation:g 1s linear infinite}
+  @keyframes g{to{transform:rotate(360deg)}}
+  .oculto{display:none}
+</style>
+</head>
+<body>
+  <div class="caja">
+    <div class="aro" id="aro"></div>
+    <h1 id="tit">Abriendo Mi Parte Sync…</h1>
+    <p id="txt">Un momento, estamos buscando el servidor de tu empresa.</p>
+    <a class="boton oculto" id="ir" href="#">Entrar</a>
+  </div>
+<script>
+// Esta pagina es la direccion FIJA de Mi Parte Sync. El servidor de la empresa cambia de direccion
+// cada vez que se reinicia el tunel, asi que aqui se consulta el listin y se redirige a la de ahora.
+// Sirve sobre todo para iPhone y iPad, donde no se puede instalar la aplicacion: se usa desde el
+// navegador y siempre por esta misma direccion.
+(function () {
+  var tit = document.getElementById('tit'), txt = document.getElementById('txt');
+  var aro = document.getElementById('aro'), ir = document.getElementById('ir');
+  function falla(m) {
+    aro.className = 'oculto';
+    tit.textContent = 'No se encuentra el servidor';
+    txt.textContent = m;
+  }
+  fetch('servidor.json?v=' + Date.now(), { cache: 'no-store' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (j) {
+      var api = j && String(j.api || '').replace(/\/+$/, '');
+      if (!api) return falla('El listin no tiene ninguna direccion apuntada.');
+      // Se comprueba que responde antes de mandar a nadie ahi.
+      return fetch(api + '/api/salud', { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (s) {
+          if (!s || !s.ok) throw new Error('sin respuesta');
+          location.replace(api + '/');
+        })
+        .catch(function () {
+          aro.className = 'oculto';
+          tit.textContent = 'El servidor no responde';
+          txt.textContent = 'Puede que el ordenador de la empresa este apagado. Prueba otra vez en un rato.';
+          ir.href = api + '/'; ir.className = 'boton'; ir.textContent = 'Intentar entrar igualmente';
+        });
+    })
+    .catch(function () { falla('No hay conexion a internet, o el listin no esta disponible.'); });
+})();
+</script>
+</body>
+</html>
